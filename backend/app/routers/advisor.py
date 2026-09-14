@@ -5,14 +5,27 @@ from google import genai
 
 from ..database import get_db
 from .. import models, schemas
+from ..auth import get_current_user
 
 router = APIRouter(prefix="/api/advisor", tags=["advisor"])
 
 
-def build_context(db: Session, question: str) -> str:
-    incomes = db.query(models.Income).all()
-    expenses = db.query(models.Expense).all()
-    stocks = db.query(models.Stock).all()
+def build_context(db: Session, user: models.User, question: str) -> str:
+    incomes = (
+        db.query(models.Income)
+        .filter(models.Income.user_id == user.id)
+        .all()
+    )
+    expenses = (
+        db.query(models.Expense)
+        .filter(models.Expense.user_id == user.id)
+        .all()
+    )
+    stocks = (
+        db.query(models.Stock)
+        .filter(models.Stock.user_id == user.id)
+        .all()
+    )
 
     total_income = sum(i.amount for i in incomes)
     total_expenses = sum(e.amount for e in expenses)
@@ -27,7 +40,7 @@ def build_context(db: Session, question: str) -> str:
         for s in stocks
     ) or "No stock holdings."
 
-    return f"""You are a professional financial advisor. Below is the user's financial data.
+    return f"""You are a personal financial advisor for {user.username}. Below is their isolated personal financial data.
 
 SUMMARY:
 - Total Income: ₹{total_income:,.2f}
@@ -48,7 +61,11 @@ User's Question: {question}
 
 
 @router.post("", response_model=schemas.AdvisorResponse)
-def ask_advisor(payload: schemas.AdvisorQuery, db: Session = Depends(get_db)):
+def ask_advisor(
+    payload: schemas.AdvisorQuery,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         raise HTTPException(
@@ -57,7 +74,7 @@ def ask_advisor(payload: schemas.AdvisorQuery, db: Session = Depends(get_db)):
         )
     try:
         client = genai.Client(api_key=api_key)
-        context = build_context(db, payload.question)
+        context = build_context(db, current_user, payload.question)
         response = client.models.generate_content(model="gemini-2.5-flash", contents=context)
         return {"answer": response.text}
     except HTTPException:

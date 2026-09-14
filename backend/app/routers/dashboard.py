@@ -4,15 +4,31 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from .. import models
+from ..auth import get_current_user
 
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 
 
 @router.get("")
-def get_dashboard(db: Session = Depends(get_db)):
-    incomes = db.query(models.Income).all()
-    expenses = db.query(models.Expense).all()
-    stocks = db.query(models.Stock).all()
+def get_dashboard(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    incomes = (
+        db.query(models.Income)
+        .filter(models.Income.user_id == current_user.id)
+        .all()
+    )
+    expenses = (
+        db.query(models.Expense)
+        .filter(models.Expense.user_id == current_user.id)
+        .all()
+    )
+    stocks = (
+        db.query(models.Stock)
+        .filter(models.Stock.user_id == current_user.id)
+        .all()
+    )
 
     total_income = sum(i.amount for i in incomes)
     total_expenses = sum(e.amount for e in expenses)
@@ -28,6 +44,12 @@ def get_dashboard(db: Session = Depends(get_db)):
     stock_performance = [{"symbol": s.symbol, "pl": s.pl} for s in stocks]
 
     return {
+        "user": {
+            "id": current_user.id,
+            "username": current_user.username,
+            "email": current_user.email,
+            "gsheet_url": current_user.gsheet_url or "",
+        },
         "total_income": total_income,
         "total_expenses": total_expenses,
         "net_cash_flow": total_income - total_expenses,

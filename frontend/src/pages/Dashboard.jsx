@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts'
 import { getDashboard } from '../services/api.js'
 import MetricCard from '../components/MetricCard.jsx'
+import { useAuth } from '../context/AuthContext.jsx'
 
 const COLORS = ['#22C7A9', '#F2B84B', '#FF6B6B', '#5B8DEF', '#B57EDC', '#4ECDC4']
 
 const inr = (n) => `₹${Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`
 
 export default function Dashboard() {
+  const { user } = useAuth()
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
 
@@ -20,7 +22,10 @@ export default function Dashboard() {
 
   return (
     <div>
-      <h2 className="text-2xl font-semibold mb-6">📊 Financial Analytics Dashboard</h2>
+      <div className="mb-6">
+        <h2 className="text-2xl font-semibold">Welcome back, {user?.username || data.user?.username || 'User'}! 👋</h2>
+        <p className="text-xs text-muted mt-1">Here is your isolated financial summary and analytics overview.</p>
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         <MetricCard label="Total Income" value={inr(data.total_income)} accent="text-mint" />
