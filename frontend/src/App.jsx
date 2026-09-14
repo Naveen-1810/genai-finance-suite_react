@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
+// GenAI Finance Suite - Production Build v2.0
 import { AuthProvider } from './context/AuthContext.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 import Sidebar from './components/Sidebar.jsx'
